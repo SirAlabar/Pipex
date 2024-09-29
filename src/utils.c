@@ -5,12 +5,20 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: hluiz-ma <hluiz-ma@student.42porto.com>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/09/22 14:00:32 by hluiz-ma          #+#    #+#             */
-/*   Updated: 2024/09/29 16:25:10 by hluiz-ma         ###   ########.fr       */
+/*   Created: 2022/02/11 20:00:33 by decortejohn       #+#    #+#             */
+/*   Updated: 2024/09/29 17:49:35 by hluiz-ma         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../include/pipex.h"
+
+/*
+void	exit_handler(int n_exit)
+{
+	if (n_exit == 1)
+		ft_putstr_fd("./pipex infile cmd cmd outfile\n", 2);
+	exit(0);
+}*/
 
 void	error_handle(void)
 {
@@ -18,20 +26,17 @@ void	error_handle(void)
 		exit(EXIT_FAILURE);
 }
 
-int	open_file(char *filename, int mode)
+int	open_file(char *file, int in_or_out)
 {
-	int	fd;
+	int	ret;
 
-	if (mode == 1)
-		fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0777);
-	else
-		fd = open(filename, O_RDONLY, 0777);
-	if (fd == -1)
-	{
-		perror(ERR_FILE);
-		exit(1);
-	}
-	return (fd);
+	if (in_or_out == 0)
+		ret = open(file, O_RDONLY, 0777);
+	if (in_or_out == 1)
+		ret = open(file, O_WRONLY | O_CREAT | O_TRUNC, 0777);
+	if (ret == -1)
+		exit(0);
+	return (ret);
 }
 
 void	ft_free_matx(char **matx)
@@ -45,7 +50,7 @@ void	ft_free_matx(char **matx)
 	}
 	free(matx);
 }
-/*
+
 char	*my_env(char *name, char *env[])
 {
 	int		i;
@@ -67,67 +72,33 @@ char	*my_env(char *name, char *env[])
 		free(sub);
 	}
 	return (NULL);
-}*/
+}
+
 
 char	*path_cmd(char *cmd, char *env[])
 {
 	int		i;
 	char	*exec;
-	char	**env_path;
+	char	**envpath;
 	char	*path_part;
+	char	**s_cmd;
 
-	if (ft_strncmp(cmd, "/", 1) == 0 || ft_strncmp(cmd, "./", 2) == 0 || ft_strncmp(cmd, "../", 3) == 0)
-	{
-		if (access(cmd, F_OK | X_OK) == 0)
-			return (ft_strdup(cmd));
-		else
-		{
-			perror(ERR_CMD);
-			return (NULL);
-		}
-	}
-	i = 0;
-	while(!ft_strnstr(env[++i], "PATH=", 5))
-		i++;
-	env_path = ft_split(env[i] + 5, ':');
 	i = -1;
-	while (env_path[++i])
+	envpath = ft_split(my_env("PATH", env), ':');
+	s_cmd = ft_split(cmd, ' ');
+	while (envpath[++i])
 	{
-		path_part = ft_strjoin(env_path[i], "/");
-		exec = ft_strjoin(path_part, cmd);
+		path_part = ft_strjoin(envpath[i], "/");
+		exec = ft_strjoin(path_part, s_cmd[0]);
 		free(path_part);
 		if (access(exec, F_OK | X_OK) == 0)
 		{
-			ft_free_matx(env_path);
+			ft_free_matx(s_cmd);
 			return (exec);
 		}
 		free(exec);
 	}
-	ft_free_matx(env_path);
-	perror(ERR_CMD);
-	return (NULL);
-}
-bool	has_spaces(char *cmd)
-{
-	int i = 0;
-
-	if (!cmd)
-		return false;
-	while (cmd[i])
-	{
-		if (cmd[0] == ' ')
-			return true;
-		i++;
-	}
-	return false;
-}
-
-int	is_special_command(char *cmd)
-{
-	if (ft_strncmp(cmd, "ls", 2) == 0 || ft_strncmp(cmd, "cd", 2) == 0 ||
-		ft_strncmp(cmd, "pwd", 3) == 0 || ft_strncmp(cmd, "echo", 4) == 0)
-	{
-		return (1); // Retorna verdadeiro se for um comando especial
-	}
-	return (0);
+	ft_free_matx(envpath);
+	ft_free_matx(s_cmd);
+	return (cmd);
 }

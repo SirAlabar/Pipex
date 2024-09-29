@@ -6,7 +6,7 @@
 /*   By: hluiz-ma <hluiz-ma@student.42porto.com>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/16 19:02:24 by hluiz-ma          #+#    #+#             */
-/*   Updated: 2024/09/29 13:36:33 by hluiz-ma         ###   ########.fr       */
+/*   Updated: 2024/09/29 17:51:02 by hluiz-ma         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,21 +37,6 @@
 # define ERR_MALC "Error: memory allocation failed: "
 # define ERR_CMD "Command not found: "
 # define ERR_FILE "No such file or directory: "
-
-/*
-**                              STRUCTS
-*/
-
-typedef struct s_args
-{
-	char	**args;
-	char	*pathname;
-	char	*infile;
-	char	*outfile;
-	int		argc;
-	bool	first_child;
-	bool	last_child;
-}			t_args;
 
 /*
 **                              PROTOTYPES
