@@ -6,7 +6,7 @@
 /*   By: hluiz-ma <hluiz-ma@student.42porto.com>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/16 19:02:24 by hluiz-ma          #+#    #+#             */
-/*   Updated: 2024/09/22 20:36:50 by hluiz-ma         ###   ########.fr       */
+/*   Updated: 2024/09/29 13:36:33 by hluiz-ma         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,10 +33,10 @@
 # define ERR_FORK "Error: fork failed."
 # define ERR_EXECVE "Error: execve failed."
 # define ERR_ARGS "Error: usage: ./pipex infile cmd1 cmd2 ... outfile\n"
-# define ERR_PERM "Error: permission denied: "
+# define ERR_PERM "Permission denied: "
 # define ERR_MALC "Error: memory allocation failed: "
-# define ERR_CMD "Error: command not found: "
-# define ERR_FILE "Error: no such file or directory: "
+# define ERR_CMD "Command not found: "
+# define ERR_FILE "No such file or directory: "
 
 /*
 **                              STRUCTS
@@ -57,8 +57,8 @@ typedef struct s_args
 **                              PROTOTYPES
 */
 
-void		parent_process(int *fd);
-void		child_process(int *fd, char *cmd, char *env[]);
+void	parent_process(char *av[], int *fd, char *env[]);
+void	child_process(char *av[], int *fd, char *env[]);
 
 void		exec_cmd(char *cmd, char **env);
 
@@ -71,9 +71,11 @@ char		*path_cmd(char *cmd, char *env[]);
 char		*my_env(char *name, char *env[]);
 
 void		ft_free_matx(char **matx);
+void	error_handle(void);
 
-void	ft_error(int fd, char *error_msg, char *filename);
+void	check_envp(char **envp);
+bool	has_spaces(char *cmd);
 
-void init_args(t_args *args, int ac);
+int	is_special_command(char *cmd);
 
 #endif
