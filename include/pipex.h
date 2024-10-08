@@ -45,22 +45,22 @@
 void	parent_process(char *av[], int *fd, char *env[]);
 void	child_process(char *av[], int *fd, char *env[]);
 
-void		exec_cmd(char *cmd, char **env);
+void	exec_cmd(char *cmd, char **env);
 
-int			open_file(char *filename, int is_output);
+int		open_file(char *filename, int is_output);
 
-void		exec_cmd(char *cmd, char **env);
-void		exec_pipes(char *cmd, char *env[]);
+void	exec_cmd(char *cmd, char **env);
+void	exec_pipes(char *cmd, char *env[]);
 
-char		*path_cmd(char *cmd, char *env[]);
-char		*my_env(char *name, char *env[]);
+char	*path_cmd(char *cmd, char *env[]);
+char	*my_env(char *name, char *env[]);
 
-void		ft_free_matx(char **matx);
+void	ft_free_matx(char **matx);
 void	error_handle(void);
 
 void	check_envp(char **envp);
 bool	has_spaces(char *cmd);
 
-int	is_special_command(char *cmd);
+int		is_special_command(char *cmd);
 
 #endif

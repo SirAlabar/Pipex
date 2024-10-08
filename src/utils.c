@@ -19,11 +19,10 @@ void	exit_handler(int n_exit)
 		ft_putstr_fd("./pipex infile cmd cmd outfile\n", 2);
 	exit(0);
 }*/
-
 void	error_handle(void)
 {
-		perror("Error");
-		exit(EXIT_FAILURE);
+	perror("Error");
+	exit(EXIT_FAILURE);
 }
 
 int	open_file(char *file, int in_or_out)
@@ -73,7 +72,6 @@ char	*my_env(char *name, char *env[])
 	}
 	return (NULL);
 }
-
 
 char	*path_cmd(char *cmd, char *env[])
 {
