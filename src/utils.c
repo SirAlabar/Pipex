@@ -6,22 +6,15 @@
 /*   By: hluiz-ma <hluiz-ma@student.42porto.com>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/02/11 20:00:33 by decortejohn       #+#    #+#             */
-/*   Updated: 2024/09/29 17:49:35 by hluiz-ma         ###   ########.fr       */
+/*   Updated: 2024/10/10 21:04:58 by hluiz-ma         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../include/pipex.h"
 
-/*
-void	exit_handler(int n_exit)
-{
-	if (n_exit == 1)
-		ft_putstr_fd("./pipex infile cmd cmd outfile\n", 2);
-	exit(0);
-}*/
 void	error_handle(void)
 {
-	perror("Error");
+	perror("pipex ");
 	exit(EXIT_FAILURE);
 }
 
