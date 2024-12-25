@@ -47,7 +47,7 @@ void init_pipe(t_pipe *pipex, int argc, char **argv, char **env)
        error_exit(ERR_MALLOC);
 }
 
-static void write_heredoc(int fd, char *limiter)
+static void write_heredoc(int fd, char *limiter, t_pipe *pipex)
 {
     char    *line;
     size_t  len;
@@ -56,16 +56,16 @@ static void write_heredoc(int fd, char *limiter)
     while (1)
     {
         write(1, "heredoc> ", 9);
-        line = get_next_line(0);
+        line = get_next_line(0, pipex->limiter);
         if (!line)
         {
-           get_next_line(-1);
+           get_next_line(-1, pipex->limiter);
            return ;
         }
         if (!ft_strncmp(line, limiter, len) && line[len] == '\n')
         {
            free(line);
-           get_next_line(-1);
+           get_next_line(-1, pipex->limiter);
            return ;
         }
         write(fd, line, ft_strlen(line));
@@ -77,7 +77,7 @@ static void write_heredoc(int fd, char *limiter)
 void    handle_heredoc(t_pipe *pipex, char *limiter)
 {
    pipex->infile = open(".heredoc_tmp", O_CREAT | O_WRONLY | O_TRUNC, 0644);
-   write_heredoc(pipex->infile, limiter);
+   write_heredoc(pipex->infile, limiter, pipex);
    close(pipex->infile);
    pipex->infile = open(".heredoc_tmp", O_RDONLY);
    if (pipex->infile < 0)
