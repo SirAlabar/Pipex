@@ -31,10 +31,14 @@ void init_pipe(t_pipe *pipex, int argc, char **argv, char **env)
 	}
     else
     {
+        if (access(argv[1], F_OK | R_OK) != 0)
+            error_exit("Permission denied");
         pipex->infile = open(argv[1], O_RDONLY);
         if (pipex->infile < 0)
-            error_exit(ERR_FILE);
+            error_exit("Permission denied");
         pipex->outfile = open(argv[argc - 1], O_WRONLY | O_CREAT | O_TRUNC, 0644);
+        if (pipex->outfile < 0)
+            error_exit("Permission denied");
     }
     if (pipex->outfile < 0)
         error_exit(ERR_FILE);   
@@ -48,34 +52,33 @@ static void write_heredoc(int fd, char *limiter)
     char    *line;
     size_t  len;
 
-    if (!limiter)
-        return ;
     len = ft_strlen(limiter);
-    if (len == 0)
-        return ;
-    while (42)
+    while (1)
     {
         write(1, "heredoc> ", 9);
         line = get_next_line(0);
         if (!line)
-            return ;
+        {
+           get_next_line(-1);
+           return ;
+        }
         if (!ft_strncmp(line, limiter, len) && line[len] == '\n')
         {
-            free(line);
-            return ;
+           free(line);
+           get_next_line(-1);
+           return ;
         }
         write(fd, line, ft_strlen(line));
         free(line);
-    }
+    }    
 }
+
 
 void    handle_heredoc(t_pipe *pipex, char *limiter)
 {
-   int     temp_fd;
-
-   temp_fd = open(".heredoc_tmp", O_CREAT | O_WRONLY | O_TRUNC, 0644);
-   write_heredoc(temp_fd, limiter);
-   close(temp_fd);
+   pipex->infile = open(".heredoc_tmp", O_CREAT | O_WRONLY | O_TRUNC, 0644);
+   write_heredoc(pipex->infile, limiter);
+   close(pipex->infile);
    pipex->infile = open(".heredoc_tmp", O_RDONLY);
    if (pipex->infile < 0)
        error_exit(ERR_FILE);

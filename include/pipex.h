@@ -29,10 +29,15 @@
 # define GREEN "\033[0;32m"
 # define RED "\033[0;31m"
 
+# define ERR_NOCMD 127    // Command not found
+# define ERR_NOEXEC 126   // Command exists but not executable
+# define ERR_NOPERM 1     // Permission denied
+# define ERR_NOFILE 1     // File not found
+
 # define ERR_PIPE "Error: pipe failed."
 # define ERR_FORK "Error: fork failed."
 # define ERR_EXECVE "Error: execve failed."
-# define ERR_ARGS "Error: usage: ./pipex infile cmd1 cmd2 ... outfile\n"
+# define ERR_ARGS "Error: usage: ./pipex infile cmd1 cmd2 ... outfile"
 # define ERR_PERM "Permission denied "
 # define ERR_MALLOC "Error: memory allocation failed "
 # define ERR_CMD "Command not found "

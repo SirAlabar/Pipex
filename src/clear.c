@@ -14,9 +14,19 @@ void wait_all_processes(t_pipe *pipex)
 
 void error_exit(char *msg)
 {
+   int err_code;
+
+   err_code = 1;
    if (msg)
-       perror(msg);
-   exit(EXIT_FAILURE);
+   {
+       if (ft_strncmp(msg, "Command", 7) == 0)
+           err_code = 127;
+       else if (ft_strncmp(msg, "Permission", 10) == 0)
+           err_code = 126;
+       ft_putstr_fd(msg, 2);
+       ft_putchar_fd('\n', 2);
+   }
+   exit(err_code);
 }
 
 void close_all_pipes(t_pipe *pipex)
