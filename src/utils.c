@@ -12,84 +12,121 @@
 
 #include "../include/pipex.h"
 
-void	error_handle(void)
+void init_pipe(t_pipe *pipex, int argc, char **argv, char **env)
 {
-	perror("pipex ");
-	exit(EXIT_FAILURE);
-}
-
-int	open_file(char *file, int in_or_out)
-{
-	int	ret;
-
-	if (in_or_out == 0)
-		ret = open(file, O_RDONLY, 0777);
-	if (in_or_out == 1)
-		ret = open(file, O_WRONLY | O_CREAT | O_TRUNC, 0777);
-	if (ret == -1)
-		exit(0);
-	return (ret);
-}
-
-void	ft_free_matx(char **matx)
-{
-	int	i;
-
-	i = -1;
-	while (matx[++i])
+   pipex->env = env;
+   pipex->is_heredoc = ft_strncmp(argv[1], "here_doc", 8) == 0;
+   pipex->cmd_count = argc - 3 - pipex->is_heredoc;
+   pipex->cmd_path = NULL;
+   pipex->cmd_args = NULL;
+   pipex->pipes = NULL;
+   pipex->pids = NULL;
+    pipex->infile = 0;
+    pipex->outfile = 0;
+    pipex->limiter = NULL;   
+	if (pipex->is_heredoc)
 	{
-		free(matx[i]);
+		pipex->limiter = argv[2];
+		pipex->outfile = open(argv[argc - 1], O_WRONLY | O_CREAT | O_APPEND, 0644);
 	}
-	free(matx);
+    else
+    {
+        pipex->infile = open(argv[1], O_RDONLY);
+        if (pipex->infile < 0)
+            error_exit(ERR_FILE);
+        pipex->outfile = open(argv[argc - 1], O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    }
+    if (pipex->outfile < 0)
+        error_exit(ERR_FILE);   
+   pipex->pids = malloc(sizeof(pid_t) * pipex->cmd_count);
+   if (!pipex->pids)
+       error_exit(ERR_MALLOC);
 }
 
-char	*my_env(char *name, char *env[])
+static void write_heredoc(int fd, char *limiter)
 {
-	int		i;
-	int		j;
-	char	*sub;
+    char    *line;
+    size_t  len;
 
-	i = -1;
-	while (env[++i])
-	{
-		j = -1;
-		while (env[i][++j] && env[i][j] != '=')
-			j++;
-		sub = ft_substr(env[i], 0, j);
-		if (ft_strncmp(sub, name, j) == 0)
-		{
-			free(sub);
-			return (env[i] + j + 1);
-		}
-		free(sub);
-	}
-	return (NULL);
+    if (!limiter)
+        return ;
+    len = ft_strlen(limiter);
+    if (len == 0)
+        return ;
+    while (42)
+    {
+        write(1, "heredoc> ", 9);
+        line = get_next_line(0);
+        if (!line)
+            return ;
+        if (!ft_strncmp(line, limiter, len) && line[len] == '\n')
+        {
+            free(line);
+            return ;
+        }
+        write(fd, line, ft_strlen(line));
+        free(line);
+    }
 }
 
-char	*path_cmd(char *cmd, char *env[])
+void    handle_heredoc(t_pipe *pipex, char *limiter)
 {
-	int		i;
-	char	*exec;
-	char	**envpath;
-	char	*path_part;
-	char	**s_cmd;
+   int     temp_fd;
 
-	i = -1;
-	envpath = ft_split(my_env("PATH", env), ':');
-	s_cmd = ft_split(cmd, ' ');
-	while (envpath[++i])
-	{
-		path_part = ft_strjoin(envpath[i], "/");
-		exec = ft_strjoin(path_part, s_cmd[0]);
-		free(path_part);
-		if (access(exec, F_OK | X_OK) == 0)
-		{
-			ft_free_matx(s_cmd);
-			return (exec);
-		}
-		free(exec);
-	}
-	ft_free_matx(envpath);
-	ft_free_matx(s_cmd);
-	return (cmd);
+   temp_fd = open(".heredoc_tmp", O_CREAT | O_WRONLY | O_TRUNC, 0644);
+   write_heredoc(temp_fd, limiter);
+   close(temp_fd);
+   pipex->infile = open(".heredoc_tmp", O_RDONLY);
+   if (pipex->infile < 0)
+       error_exit(ERR_FILE);
+}
+
+void create_pipes(t_pipe *pipex)
+{
+    int i;
+
+    pipex->pipes = malloc(sizeof(int *) * (pipex->cmd_count - 1));
+    if (!pipex->pipes)
+        error_exit(ERR_MALLOC);
+
+    i = -1;
+    while (++i < pipex->cmd_count - 1)
+    {
+        pipex->pipes[i] = malloc(sizeof(int) * 2);
+        if (!pipex->pipes[i])
+            error_exit(ERR_MALLOC);
+        if (pipe(pipex->pipes[i]) < 0)
+            error_exit(ERR_PIPE);
+    }
+}
+
+void setup_redirects(t_pipe *pipex, int cmd_index)
+{
+   if (cmd_index == 0)
+       dup2(pipex->infile, STDIN_FILENO);
+   else
+       dup2(pipex->pipes[cmd_index - 1][0], STDIN_FILENO);
+   if (cmd_index == pipex->cmd_count - 1)
+       dup2(pipex->outfile, STDOUT_FILENO);
+   else
+       dup2(pipex->pipes[cmd_index][1], STDOUT_FILENO);
+   close_all_pipes(pipex);
+}
+
+void execute_cmd(t_pipe *pipex, char *cmd, int cmd_index)
+{
+   pipex->pids[cmd_index] = fork();
+   if (pipex->pids[cmd_index] < 0)
+       error_exit(ERR_FORK);
+   if (pipex->pids[cmd_index] == 0)
+   {
+       setup_redirects(pipex, cmd_index);
+       pipex->cmd_args = get_cmd_args(cmd);
+       if (!pipex->cmd_args)
+           error_exit(ERR_MALLOC);
+       pipex->cmd_path = find_path(pipex->cmd_args[0], pipex->env);
+       if (!pipex->cmd_path)
+           error_exit(ERR_CMD);
+       execve(pipex->cmd_path, pipex->cmd_args, pipex->env);
+   }
 }
