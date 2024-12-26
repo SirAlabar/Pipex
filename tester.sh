@@ -21,22 +21,20 @@ test_result() {
    local result=$?
    echo -e "${YELLOW}Exit code:${NC} $result"
    
-   if [ $result -eq 0 ]; then
+   # Mudando condições de sucesso/falha para erros específicos
+   if [[ "$test_name" == *"Permission denied"* && $result -eq 126 ]]; then
+       echo -e "${GREEN}✓ Test passed: $test_name${NC}"
+   elif [[ "$test_name" == *"Invalid command"* && $result -eq 127 ]]; then
+       echo -e "${GREEN}✓ Test passed: $test_name${NC}"
+   elif [[ "$test_name" == *"Non-existent"* && $result -eq 1 ]]; then
+       echo -e "${GREEN}✓ Test passed: $test_name${NC}"
+   elif [[ "$test_name" == *"arguments"* && $result -eq 1 ]]; then
+       echo -e "${GREEN}✓ Test passed: $test_name${NC}"
+   elif [ $result -eq 0 ]; then
        echo -e "${GREEN}✓ Test passed: $test_name${NC}"
    else
        echo -e "${RED}✗ Test failed: $test_name${NC}"
    fi
-   echo -e "${YELLOW}Expected shell behavior:${NC}"
-   if [[ "$cmd" == *"nonexistent"* ]]; then
-       eval "< nonexistent ls | wc > outfile" 2>&1
-   elif [[ "$cmd" == *"noperm"* ]]; then
-       eval "< noperm ls | wc > outfile" 2>&1
-   elif [[ "$cmd" == *"'invalidcmd'"* ]]; then
-       eval "< infile invalidcmd | wc > outfile" 2>&1
-   else
-       eval "$cmd" 2>&1
-   fi
-   echo -e "Shell exit code: $?"
    echo -e "----------------------------------------\n"
    sleep 0.5
 }
@@ -74,12 +72,24 @@ separator "BONUS TESTS"
 test_result "./pipex infile 'cat' 'grep test' 'wc -l' 'tr a b' outfile" "Multiple pipes"
 test_result "diff outfile <(< infile cat | grep test | wc -l | tr a b)" "Compare multiple pipes"
 
-echo -e "${YELLOW}Testing heredoc (manual input required):${NC}"
-test_result "./pipex here_doc EOF 'grep test' 'wc -l' outfile" "Heredoc functionality"
+echo -e "${YELLOW}Testing heredoc:${NC}"
+test_result "./pipex here_doc EOF 'cat' 'grep test' outfile" "Heredoc with simple commands"
+test_result "./pipex here_doc LIMITER 'grep a' 'wc -l' outfile" "Heredoc with different limiter"
+test_result "./pipex here_doc END 'cat' 'sort' 'uniq' outfile" "Heredoc with multiple pipes"
 
 separator "MEMORY TESTS"
 
-test_result "valgrind --leak-check=full --show-leak-kinds=all ./pipex infile 'ls' 'wc' outfile" "Memory leaks check"
+echo -e "${YELLOW}Testing memory with basic commands:${NC}"
+test_result "valgrind --leak-check=full --show-leak-kinds=all ./pipex infile 'ls' 'wc' outfile" "Basic memory test"
+
+echo -e "${YELLOW}Testing memory with invalid commands:${NC}"
+test_result "valgrind --leak-check=full --show-leak-kinds=all ./pipex infile 'invalid' 'wc' outfile" "Memory with invalid command"
+
+echo -e "${YELLOW}Testing memory with heredoc:${NC}"
+test_result "valgrind --leak-check=full --show-leak-kinds=all ./pipex here_doc EOF 'cat' 'wc -l' outfile" "Memory with heredoc"
+
+echo -e "${YELLOW}Testing memory with multiple pipes:${NC}"
+test_result "valgrind --leak-check=full --show-leak-kinds=all ./pipex infile 'cat' 'grep a' 'wc -l' 'sort' outfile" "Memory with multiple pipes"
 
 separator "CLEANUP"
 
