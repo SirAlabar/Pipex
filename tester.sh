@@ -91,6 +91,27 @@ test_result "valgrind --leak-check=full --show-leak-kinds=all ./pipex here_doc E
 echo -e "${YELLOW}Testing memory with multiple pipes:${NC}"
 test_result "valgrind --leak-check=full --show-leak-kinds=all ./pipex infile 'cat' 'grep a' 'wc -l' 'sort' outfile" "Memory with multiple pipes"
 
+separator "ADDITIONAL MEMORY TESTS"
+
+echo -e "${YELLOW}Testing memory with empty file:${NC}"
+touch empty_file
+test_result "valgrind --leak-check=full --show-leak-kinds=all ./pipex empty_file 'cat' 'wc -l' outfile" "Memory with empty file"
+
+echo -e "${YELLOW}Testing memory with large command:${NC}"
+test_result "valgrind --leak-check=full --show-leak-kinds=all ./pipex infile 'cat' 'grep test | sort | uniq | wc -l' outfile" "Memory with large command"
+
+echo -e "${YELLOW}Testing memory with special characters:${NC}"
+test_result "valgrind --leak-check=full --show-leak-kinds=all ./pipex infile 'grep \"\\$\"' 'tr -d \"\\$\"' outfile" "Memory with special chars"
+
+echo -e "${YELLOW}Testing memory with non-existent path:${NC}"
+test_result "valgrind --leak-check=full --show-leak-kinds=all ./pipex infile '/non/existent/path/ls' 'wc' outfile" "Memory with invalid path"
+
+echo -e "${YELLOW}Testing memory with heredoc and special delimiter:${NC}"
+test_result "valgrind --leak-check=full --show-leak-kinds=all ./pipex here_doc 'END$$##' 'sort -r' 'uniq' outfile" "Memory with special delimiter"
+
+# Cleanup the extra test file
+rm -f empty_file
+
 separator "CLEANUP"
 
 test_result "rm -f infile outfile outfile_expected noperm" "Cleanup"
