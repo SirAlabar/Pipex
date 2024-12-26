@@ -12,47 +12,6 @@
 
 #include "../include/pipex.h"
 
-void init_pipe(t_pipe *pipex, int argc, char **argv, char **env)
-{
-   pipex->env = env;
-   pipex->is_heredoc = ft_strncmp(argv[1], "here_doc", 8) == 0;
-   pipex->cmd_count = argc - 3 - pipex->is_heredoc;
-   pipex->cmd_path = NULL;
-   pipex->cmd_args = NULL;
-   pipex->pipes = NULL;
-   pipex->pids = NULL;
-    pipex->infile = 0;
-    pipex->outfile = 0;
-    pipex->limiter = NULL;   
-	if (pipex->is_heredoc)
-	{
-		pipex->limiter = argv[2];
-		pipex->outfile = open(argv[argc - 1], O_WRONLY | O_CREAT | O_APPEND, 0644);
-	}
-    else
-    {
-        if (access(argv[1], F_OK) != 0)
-            error_exit(ERR_FILE);
-        if (access(argv[1], R_OK) != 0)
-            error_exit(ERR_PERM);
-        pipex->infile = open(argv[1], O_RDONLY);
-        if (pipex->infile < 0)
-            error_exit(ERR_PERM);
-        pipex->outfile = open(argv[argc - 1], O_WRONLY | O_CREAT | O_TRUNC, 0644);
-        if (pipex->outfile < 0)
-        {
-            if (access(argv[argc - 1], F_OK) != 0)
-                error_exit(ERR_FILE);
-            error_exit(ERR_PERM);
-        }
-    }
-    if (pipex->outfile < 0)
-        error_exit(ERR_FILE);   
-   pipex->pids = malloc(sizeof(pid_t) * pipex->cmd_count);
-   if (!pipex->pids)
-       error_exit(ERR_MALLOC);
-}
-
 static void write_heredoc(int fd, char *limiter, t_pipe *pipex)
 {
     char    *line;
@@ -79,7 +38,6 @@ static void write_heredoc(int fd, char *limiter, t_pipe *pipex)
     }    
 }
 
-
 void    handle_heredoc(t_pipe *pipex, char *limiter)
 {
    pipex->infile = open(".heredoc_tmp", O_CREAT | O_WRONLY | O_TRUNC, 0644);
@@ -97,7 +55,6 @@ void create_pipes(t_pipe *pipex)
     pipex->pipes = malloc(sizeof(int *) * (pipex->cmd_count - 1));
     if (!pipex->pipes)
         error_exit(ERR_MALLOC);
-
     i = -1;
     while (++i < pipex->cmd_count - 1)
     {
@@ -120,22 +77,4 @@ void setup_redirects(t_pipe *pipex, int cmd_index)
    else
        dup2(pipex->pipes[cmd_index][1], STDOUT_FILENO);
    close_all_pipes(pipex);
-}
-
-void execute_cmd(t_pipe *pipex, char *cmd, int cmd_index)
-{
-   pipex->pids[cmd_index] = fork();
-   if (pipex->pids[cmd_index] < 0)
-       error_exit(ERR_FORK);
-   if (pipex->pids[cmd_index] == 0)
-   {
-       setup_redirects(pipex, cmd_index);
-       pipex->cmd_args = get_cmd_args(cmd);
-       if (!pipex->cmd_args)
-           error_exit(ERR_MALLOC);
-       pipex->cmd_path = find_path(pipex->cmd_args[0], pipex->env);
-       if (!pipex->cmd_path)
-           error_exit(ERR_CMD);
-       execve(pipex->cmd_path, pipex->cmd_args, pipex->env);
-   }
 }
