@@ -6,18 +6,29 @@
 /*   By: hluiz-ma <hluiz-ma@student.42porto.com>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/10/30 14:09:15 by jdecorte          #+#    #+#             */
-/*   Updated: 2024/10/10 21:21:12 by hluiz-ma         ###   ########.fr       */
+/*   Updated: 2024/12/28 12:34:59 by hluiz-ma         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../include/pipex.h"
+
+static void	handle_outfile(t_pipe *pipex, char *outfile)
+{
+	if (pipex->outfile < 0)
+	{
+		if (access(outfile, F_OK) != 0)
+			error_exit(ERR_FILE);
+		error_exit(ERR_PERM);
+	}
+}
 
 static void	handle_files(t_pipe *pipex, int argc, char **argv)
 {
 	if (pipex->is_heredoc)
 	{
 		pipex->limiter = argv[2];
-		pipex->outfile = open(argv[argc - 1], O_WRONLY | O_CREAT | O_APPEND, 0644);
+		pipex->outfile = open(argv[argc - 1], O_WRONLY | O_CREAT | O_APPEND,
+				0644);
 	}
 	else
 	{
@@ -28,13 +39,9 @@ static void	handle_files(t_pipe *pipex, int argc, char **argv)
 		pipex->infile = open(argv[1], O_RDONLY);
 		if (pipex->infile < 0)
 			error_exit(ERR_PERM);
-		pipex->outfile = open(argv[argc - 1], O_WRONLY | O_CREAT | O_TRUNC, 0644);
-		if (pipex->outfile < 0)
-		{
-			if (access(argv[argc - 1], F_OK) != 0)
-				error_exit(ERR_FILE);
-			error_exit(ERR_PERM);
-		}
+		pipex->outfile = open(argv[argc - 1], O_WRONLY | O_CREAT | O_TRUNC,
+				0644);
+		handle_outfile(pipex, argv[argc - 1]);
 	}
 	if (pipex->outfile < 0)
 		error_exit(ERR_FILE);
@@ -58,20 +65,19 @@ void	init_pipe(t_pipe *pipex, int argc, char **argv, char **env)
 		error_exit(ERR_MALLOC);
 }
 
-int main(int argc, char **argv, char **env)
+int	main(int argc, char **argv, char **env)
 {
-	t_pipe pipex;
-	int i;
+	t_pipe	pipex;
+	int		i;
 
-	if(argc < 5)
+	if (argc < 5)
 		error_exit(ERR_ARGS);
 	init_pipe(&pipex, argc, argv, env);
 	create_pipes(&pipex);
-	if(pipex.is_heredoc)
+	if (pipex.is_heredoc)
 		handle_heredoc(&pipex, pipex.limiter);
-
 	i = -1;
-	while(++i < pipex.cmd_count)
+	while (++i < pipex.cmd_count)
 		execute_cmd(&pipex, argv[i + 2 + pipex.is_heredoc], i);
 	close_all_pipes(&pipex);
 	wait_all_processes(&pipex);

@@ -109,6 +109,6 @@ char	*get_next_line(int fd, char *limiter)
 	line = get_line(backup);
 	backup = get_next(backup);
 	if (ft_strncmp(line, limiter, ft_strlen(limiter)) == 0)
-		free(backup);	
+		free(backup);
 	return (line);
 }

@@ -1,15 +1,26 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   clear.c                                            :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: hluiz-ma <hluiz-ma@student.42porto.com>    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2024/12/28 12:23:48 by hluiz-ma          #+#    #+#             */
+/*   Updated: 2024/12/28 12:23:51 by hluiz-ma         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
 
 #include "../include/pipex.h"
 
-void wait_all_processes(t_pipe *pipex)
+void	wait_all_processes(t_pipe *pipex)
 {
-    int i;
+	int	i;
 
-    i = -1;
-    while (++i < pipex->cmd_count)
-        waitpid(pipex->pids[i], NULL, 0);
-    if (pipex->is_heredoc)
-        unlink(".heredoc_tmp");
+	i = -1;
+	while (++i < pipex->cmd_count)
+		waitpid(pipex->pids[i], NULL, 0);
+	if (pipex->is_heredoc)
+		unlink(".heredoc_tmp");
 }
 
 void	error_exit(char *msg)
@@ -29,42 +40,42 @@ void	error_exit(char *msg)
 	exit(err_code);
 }
 
-void close_all_pipes(t_pipe *pipex)
+void	close_all_pipes(t_pipe *pipex)
 {
-    int i;
+	int	i;
 
-    i = -1;
-    while(++i < pipex->cmd_count -1)
-    {
-        close(pipex->pipes[i][0]);
-        close(pipex->pipes[i][1]);        
-    }
-    if(pipex->infile > 0)
-        close(pipex->infile);
-    if(pipex->outfile > 0)
-        close(pipex->outfile);
+	i = -1;
+	while (++i < pipex->cmd_count - 1)
+	{
+		close(pipex->pipes[i][0]);
+		close(pipex->pipes[i][1]);
+	}
+	if (pipex->infile > 0)
+		close(pipex->infile);
+	if (pipex->outfile > 0)
+		close(pipex->outfile);
 }
 
-void free_pipes_and_pids(t_pipe *pipex)
+void	free_pipes_and_pids(t_pipe *pipex)
 {
-   int i;
+	int	i;
 
-    if (pipex && pipex->pids)
-   {
-       free(pipex->pids);
-       pipex->pids = NULL;
-   }
-    if (pipex && pipex->pipes)
-   {
-       i = -1;
-       while (++i < pipex->cmd_count - 1 && pipex->pipes[i])
-       {
-           free(pipex->pipes[i]);
-           pipex->pipes[i] = NULL;
-       }
-       free(pipex->pipes);
-       pipex->pipes = NULL;
-   }
+	if (pipex && pipex->pids)
+	{
+		free(pipex->pids);
+		pipex->pids = NULL;
+	}
+	if (pipex && pipex->pipes)
+	{
+		i = -1;
+		while (++i < pipex->cmd_count - 1 && pipex->pipes[i])
+		{
+			free(pipex->pipes[i]);
+			pipex->pipes[i] = NULL;
+		}
+		free(pipex->pipes);
+		pipex->pipes = NULL;
+	}
 }
 
 void	cleanup(t_pipe *pipex)
