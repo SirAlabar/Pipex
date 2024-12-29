@@ -27,6 +27,8 @@ SRCS_BONUS = ./bonus
 # Source files
 SRCS = $(SRCS_DIR)/main.c \
 		$(SRCS_DIR)/utils.c \
+		$(SRCS_DIR)/cmd_utils.c \
+		$(SRCS_DIR)/clear.c
 
 		
 BONUS = #$(SRCS_BONUS)/main_bonus.c \
@@ -44,7 +46,7 @@ $(NAME):	$(SRCS) $(LIBFT) $(OBJS)
 			@echo "\033[0;31m𓄿 𓅓  Made by Alabar 𓄿 𓅓"
 
 # Building the bonus executable
-bonus: $(B_NAME)
+bonus: $(NAME)
 
 $(B_NAME): $(OBJS_BONUS) $(LIBFT)
 			@$(CC) $(CFLAGS) $(IFLAGS) $(OBJS_BONUS) $(LIBFT) -o $(B_NAME)

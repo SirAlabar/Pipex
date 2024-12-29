@@ -6,99 +6,81 @@
 /*   By: hluiz-ma <hluiz-ma@student.42porto.com>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/10/30 14:09:15 by jdecorte          #+#    #+#             */
-/*   Updated: 2024/10/10 21:21:12 by hluiz-ma         ###   ########.fr       */
+/*   Updated: 2024/12/28 12:34:59 by hluiz-ma         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../include/pipex.h"
 
-void	exec_cmd(char *cmd, char **env)
+static void	handle_outfile(t_pipe *pipex, char *outfile)
 {
-	char	**args;
-	char	*path;
-
-	if (!cmd || !*cmd || cmd[0] == ' ')
-		error_handle();
-	args = ft_split(cmd, ' ');
-	path = path_cmd(args[0], env);
-	if (!path)
+	if (pipex->outfile < 0)
 	{
-		ft_free_matx(args);
-		free(path);
-		exit(127);
-	}
-	if (execve(path, args, env) == -1)
-	{
-		ft_free_matx(args);
-		free(path);
-		error_handle();
+		if (access(outfile, F_OK) != 0)
+			error_exit(ERR_FILE);
+		error_exit(ERR_PERM);
 	}
 }
 
-void	child_process(char *av[], int *fd, char *env[])
+static void	handle_files(t_pipe *pipex, int argc, char **argv)
 {
-	int	c_fd;
-
-	if (!av[2] || !*av[2])
+	if (pipex->is_heredoc)
 	{
-		ft_putstr_fd(ERR_CMD, 2);
-		exit(127);
-	}
-	c_fd = open(av[1], O_RDONLY, 0777);
-	if (c_fd == -1)
-		error_handle();
-	dup2(fd[1], STDOUT_FILENO);
-	dup2(c_fd, STDIN_FILENO);
-	close(fd[0]);
-	close(fd[1]);
-	close(c_fd);
-	exec_cmd(av[2], env);
-}
-
-void	parent_process(char *av[], int *fd, char *env[])
-{
-	int	p_fd;
-
-	if (!av[3] || !*av[3])
-	{
-		ft_putstr_fd(ERR_CMD, 2);
-		exit(127);
-	}
-	if (access(av[4], F_OK) == -1)
-	{
-		perror(av[4]);
-		exit(127);
-	}
-	p_fd = open(av[4], O_WRONLY | O_CREAT | O_TRUNC, 0777);
-	dup2(fd[0], STDIN_FILENO);
-	dup2(p_fd, STDOUT_FILENO);
-	close(fd[1]);
-	close(fd[0]);
-	close(p_fd);
-	exec_cmd(av[3], env);
-}
-
-int	main(int ac, char **av, char **env)
-{
-	int		p_fd[2];
-	pid_t	pid;
-
-	if (ac == 5)
-	{
-		if (pipe(p_fd) == -1)
-			exit(-1);
-		pid = fork();
-		if (pid == -1)
-			exit(-1);
-		if (pid == 0)
-			child_process(av, p_fd, env);
-		waitpid(pid, NULL, 0);
-		parent_process(av, p_fd, env);
+		pipex->limiter = argv[2];
+		pipex->outfile = open(argv[argc - 1], O_WRONLY | O_CREAT | O_APPEND,
+				0644);
 	}
 	else
 	{
-		ft_putstr_fd("\033[31mError: Bad arguments\n\e[0m", 2);
-		ft_putstr_fd("Ex: ./pipex <file1> <cmd1> <cmd2> <file2>\n", 1);
+		if (access(argv[1], F_OK) != 0)
+			error_exit(ERR_FILE);
+		if (access(argv[1], R_OK) != 0)
+			error_exit(ERR_PERM);
+		pipex->infile = open(argv[1], O_RDONLY);
+		if (pipex->infile < 0)
+			error_exit(ERR_PERM);
+		pipex->outfile = open(argv[argc - 1], O_WRONLY | O_CREAT | O_TRUNC,
+				0644);
+		handle_outfile(pipex, argv[argc - 1]);
 	}
+	if (pipex->outfile < 0)
+		error_exit(ERR_FILE);
+}
+
+void	init_pipe(t_pipe *pipex, int argc, char **argv, char **env)
+{
+	pipex->env = env;
+	pipex->is_heredoc = ft_strncmp(argv[1], "here_doc", 8) == 0;
+	pipex->cmd_count = argc - 3 - pipex->is_heredoc;
+	pipex->cmd_path = NULL;
+	pipex->cmd_args = NULL;
+	pipex->pipes = NULL;
+	pipex->pids = NULL;
+	pipex->infile = 0;
+	pipex->outfile = 0;
+	pipex->limiter = NULL;
+	handle_files(pipex, argc, argv);
+	pipex->pids = malloc(sizeof(pid_t) * pipex->cmd_count);
+	if (!pipex->pids)
+		error_exit(ERR_MALLOC);
+}
+
+int	main(int argc, char **argv, char **env)
+{
+	t_pipe	pipex;
+	int		i;
+
+	if (argc < 5)
+		error_exit(ERR_ARGS);
+	init_pipe(&pipex, argc, argv, env);
+	create_pipes(&pipex);
+	if (pipex.is_heredoc)
+		handle_heredoc(&pipex, pipex.limiter);
+	i = -1;
+	while (++i < pipex.cmd_count)
+		execute_cmd(&pipex, argv[i + 2 + pipex.is_heredoc], i);
+	close_all_pipes(&pipex);
+	wait_all_processes(&pipex);
+	cleanup(&pipex);
 	return (0);
 }

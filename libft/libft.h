@@ -80,7 +80,7 @@ int					ft_putstr(const char *s);
 int					ft_format(const char *format, unsigned int *i,
 						va_list args);
 
-char				*get_next_line(int fd);
+char				*get_next_line(int fd, char *limiter);
 char				*read_line(int fd, char *backup);
 char				*get_line(char *backup);
 char				*get_next(char *backup);

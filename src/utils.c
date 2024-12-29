@@ -6,90 +6,85 @@
 /*   By: hluiz-ma <hluiz-ma@student.42porto.com>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/02/11 20:00:33 by decortejohn       #+#    #+#             */
-/*   Updated: 2024/10/10 21:04:58 by hluiz-ma         ###   ########.fr       */
+/*   Updated: 2024/12/28 12:30:30 by hluiz-ma         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../include/pipex.h"
 
-void	error_handle(void)
+static void	write_heredoc(int fd, char *limiter, t_pipe *pipex)
 {
-	perror("pipex ");
-	exit(EXIT_FAILURE);
+	char	*line;
+	size_t	len;
+
+	len = ft_strlen(limiter);
+	while (1)
+	{
+		write(1, "heredoc> ", 9);
+		line = get_next_line(0, pipex->limiter);
+		if (!line)
+		{
+			get_next_line(-1, pipex->limiter);
+			return ;
+		}
+		if (!ft_strncmp(line, limiter, len) && line[len] == '\n')
+		{
+			free(line);
+			get_next_line(-1, pipex->limiter);
+			return ;
+		}
+		write(fd, line, ft_strlen(line));
+		free(line);
+	}
 }
 
-int	open_file(char *file, int in_or_out)
-{
-	int	ret;
-
-	if (in_or_out == 0)
-		ret = open(file, O_RDONLY, 0777);
-	if (in_or_out == 1)
-		ret = open(file, O_WRONLY | O_CREAT | O_TRUNC, 0777);
-	if (ret == -1)
-		exit(0);
-	return (ret);
-}
-
-void	ft_free_matx(char **matx)
+void	free_paths(char **paths)
 {
 	int	i;
 
 	i = -1;
-	while (matx[++i])
-	{
-		free(matx[i]);
-	}
-	free(matx);
+	while (paths[++i])
+		free(paths[i]);
+	free(paths);
 }
 
-char	*my_env(char *name, char *env[])
+void	handle_heredoc(t_pipe *pipex, char *limiter)
 {
-	int		i;
-	int		j;
-	char	*sub;
-
-	i = -1;
-	while (env[++i])
-	{
-		j = -1;
-		while (env[i][++j] && env[i][j] != '=')
-			j++;
-		sub = ft_substr(env[i], 0, j);
-		if (ft_strncmp(sub, name, j) == 0)
-		{
-			free(sub);
-			return (env[i] + j + 1);
-		}
-		free(sub);
-	}
-	return (NULL);
+	pipex->infile = open(".heredoc_tmp", O_CREAT | O_WRONLY | O_TRUNC, 0644);
+	write_heredoc(pipex->infile, limiter, pipex);
+	close(pipex->infile);
+	pipex->infile = open(".heredoc_tmp", O_RDONLY);
+	if (pipex->infile < 0)
+		error_exit(ERR_FILE);
 }
 
-char	*path_cmd(char *cmd, char *env[])
+void	create_pipes(t_pipe *pipex)
 {
-	int		i;
-	char	*exec;
-	char	**envpath;
-	char	*path_part;
-	char	**s_cmd;
+	int	i;
 
+	pipex->pipes = malloc(sizeof(int *) * (pipex->cmd_count - 1));
+	if (!pipex->pipes)
+		error_exit(ERR_MALLOC);
 	i = -1;
-	envpath = ft_split(my_env("PATH", env), ':');
-	s_cmd = ft_split(cmd, ' ');
-	while (envpath[++i])
+	while (++i < pipex->cmd_count - 1)
 	{
-		path_part = ft_strjoin(envpath[i], "/");
-		exec = ft_strjoin(path_part, s_cmd[0]);
-		free(path_part);
-		if (access(exec, F_OK | X_OK) == 0)
-		{
-			ft_free_matx(s_cmd);
-			return (exec);
-		}
-		free(exec);
+		pipex->pipes[i] = malloc(sizeof(int) * 2);
+		if (!pipex->pipes[i])
+			error_exit(ERR_MALLOC);
+		if (pipe(pipex->pipes[i]) < 0)
+			error_exit(ERR_PIPE);
 	}
-	ft_free_matx(envpath);
-	ft_free_matx(s_cmd);
-	return (cmd);
+}
+
+void	setup_redirects(t_pipe *pipex, int cmd_index)
+{
+	if (cmd_index == 0)
+		dup2(pipex->infile, STDIN_FILENO);
+	else
+		dup2(pipex->pipes[cmd_index - 1][0], STDIN_FILENO);
+	if (cmd_index == pipex->cmd_count - 1)
+		dup2(pipex->outfile, STDOUT_FILENO);
+	else
+		dup2(pipex->pipes[cmd_index][1], STDOUT_FILENO);
+	close_all_pipes(pipex);
 }

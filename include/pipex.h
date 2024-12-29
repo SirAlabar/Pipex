@@ -6,7 +6,7 @@
 /*   By: hluiz-ma <hluiz-ma@student.42porto.com>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/16 19:02:24 by hluiz-ma          #+#    #+#             */
-/*   Updated: 2024/09/29 17:51:02 by hluiz-ma         ###   ########.fr       */
+/*   Updated: 2024/12/28 12:34:29 by hluiz-ma         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,38 +29,56 @@
 # define GREEN "\033[0;32m"
 # define RED "\033[0;31m"
 
+# define ERR_NOCMD 127  // Command not found
+# define ERR_NOEXEC 126 // Command exists but not executable
+# define ERR_NOPERM 1   // Permission denied
+# define ERR_NOFILE 1   // File not found
+
 # define ERR_PIPE "Error: pipe failed."
 # define ERR_FORK "Error: fork failed."
 # define ERR_EXECVE "Error: execve failed."
-# define ERR_ARGS "Error: usage: ./pipex infile cmd1 cmd2 ... outfile\n"
-# define ERR_PERM "Permission denied: "
-# define ERR_MALC "Error: memory allocation failed: "
-# define ERR_CMD "Command not found: "
-# define ERR_FILE "No such file or directory: "
+# define ERR_ARGS "Error: usage: ./pipex infile cmd1 cmd2 ... outfile"
+# define ERR_PERM "Permission denied "
+# define ERR_MALLOC "Error: memory allocation failed "
+# define ERR_CMD "Command not found "
+# define ERR_FILE "No such file or directory "
+
+typedef struct s_pipe
+{
+	int		infile;
+	int		outfile;
+	char	*cmd_path;
+	char	**cmd_args;
+	char	**env;
+	int		**pipes;
+	pid_t	*pids;
+	int		cmd_count;
+	int		is_heredoc;
+	char	*limiter;
+}			t_pipe;
 
 /*
 **                              PROTOTYPES
 */
 
-void	parent_process(char *av[], int *fd, char *env[]);
-void	child_process(char *av[], int *fd, char *env[]);
+// utils
+void		init_pipe(t_pipe *pipex, int argc, char **argv, char **env);
+void		execute_cmd(t_pipe *pipex, char *cmd, int cmd_index);
+void		handle_heredoc(t_pipe *pipex, char *limiter);
+void		setup_redirects(t_pipe *pipex, int cmd_index);
+void		create_pipes(t_pipe *pipex);
 
-void	exec_cmd(char *cmd, char **env);
+// cmd_utils
+char		*find_path(char *cmd, char **env);
+char		**get_cmd_args(char *cmd);
+char		*get_env_path(char **env);
 
-int		open_file(char *filename, int is_output);
-
-void	exec_cmd(char *cmd, char **env);
-void	exec_pipes(char *cmd, char *env[]);
-
-char	*path_cmd(char *cmd, char *env[]);
-char	*my_env(char *name, char *env[]);
-
-void	ft_free_matx(char **matx);
-void	error_handle(void);
-
-void	check_envp(char **envp);
-bool	has_spaces(char *cmd);
-
-int		is_special_command(char *cmd);
+// clear
+void		close_all_pipes(t_pipe *pipex);
+void		wait_all_processes(t_pipe *pipex);
+void		error_exit(char *msg);
+void		free_pipes_and_pids(t_pipe *pipex);
+void		cleanup(t_pipe *pipex);
+void		free_paths(char **paths);
 
 #endif
